@@ -1,7 +1,7 @@
 <?php
 include_once( dirname( __FILE__ ) . DIRECTORY_SEPARATOR . 'interface.php' );
 
-class WC_Gateway_Nimiq_Service_Nimiqwatch implements WC_Gateway_Nimiq_Service_Interface {
+class WC_Gateway_Nimiq_Service_NimiqX implements WC_Gateway_Nimiq_Service_Interface {
     /**
      * Initializes the validation service
      * @param {WC_Gateway_Nimiq} $gateway - A WC_Gateway_Nimiq class instance
@@ -9,7 +9,18 @@ class WC_Gateway_Nimiq_Service_Nimiqwatch implements WC_Gateway_Nimiq_Service_In
      */
     public function __construct( $gateway ) {
         $this->transaction = null;
-        $this->api_domain = $gateway->get_option( 'network' ) === 'main' ? 'https://api.nimiq.watch' : 'https://test-api.nimiq.watch';
+
+        if ( $gateway->get_option( 'network' ) !== 'main' ) {
+            throw new WP_Error('connection', 'NimiqX can only be used in mainnet.');
+        }
+
+        $this->api_key = $gateway->get_option( 'nimiqx_api_key' );
+        if ( empty( $this->api_key ) ) {
+            throw new WP_Error('connection', 'API key not set.');
+        }
+        if ( !ctype_xdigit( $this->api_key ) ) {
+            throw new WP_Error('service', 'Invalid API key.');
+        }
     }
 
     /**
@@ -17,23 +28,19 @@ class WC_Gateway_Nimiq_Service_Nimiqwatch implements WC_Gateway_Nimiq_Service_In
      * @return {number|WP_Error}
      */
     public function blockchain_height() {
-        $api_response = wp_remote_get( $this->api_domain . '/latest/1' );
+        $api_response = wp_remote_get( $this->makeUrl( 'network-stats' ) );
 
         if ( is_wp_error( $api_response ) ) {
             return $api_response;
         }
 
-        $latest_block = json_decode( $api_response[ 'body' ] );
+        $network_stats = json_decode( $api_response[ 'body' ] );
 
-        if ( $latest_block->error ) {
-            return new WP_Error( 'service', $latest_block->error );
+        if ( $network_stats->error ) {
+            return new WP_Error( 'service', $network_stats->error );
         }
 
-        if ( empty( $latest_block ) ) {
-            return new WP_Error( 'service', 'Could not get the current blockchain height from NIMIQ.WATCH.' );
-        }
-
-        return $latest_block[ 0 ]->height;
+        return $network_stats[ 0 ]->height;
     }
 
     /**
@@ -46,16 +53,19 @@ class WC_Gateway_Nimiq_Service_Nimiqwatch implements WC_Gateway_Nimiq_Service_In
             return new WP_Error('service', 'Invalid transaction hash.');
         }
 
-        // Convert HEX hash into base64
-        $transaction_hash = urlencode( base64_encode( pack( 'H*', $transaction_hash ) ) );
-
-        $api_response = wp_remote_get( $this->api_domain . '/transaction/' . $transaction_hash );
+        $api_response = wp_remote_get( $this->makeUrl( 'transaction/' . $transaction_hash ) );
 
         if ( is_wp_error( $api_response ) ) {
             return $api_response;
         }
 
-        $this->transaction = json_decode( $api_response[ 'body' ] );
+        $transaction = json_decode( $api_response[ 'body' ] );
+
+        if ( $transaction->error ) {
+            return new WP_Error( 'service', $transaction->error );
+        }
+
+        $this->transaction = $transaction;
     }
 
     /**
@@ -72,7 +82,7 @@ class WC_Gateway_Nimiq_Service_Nimiqwatch implements WC_Gateway_Nimiq_Service_In
      */
     public function error() {
         if ( empty( $this->transaction ) ) {
-            return 'Could not retrieve transaction information from NIMIQ.WATCH.';
+            return 'Could not retrieve transaction information from NimiqX.';
         }
         return $this->transaction->error || false;
     }
@@ -82,7 +92,7 @@ class WC_Gateway_Nimiq_Service_Nimiqwatch implements WC_Gateway_Nimiq_Service_In
      * @return {string}
      */
     public function sender_address() {
-        return $this->transaction->sender_address;
+        return $this->transaction->from_address;
     }
 
     /**
@@ -90,7 +100,7 @@ class WC_Gateway_Nimiq_Service_Nimiqwatch implements WC_Gateway_Nimiq_Service_In
      * @return {string}
      */
     public function recipient_address() {
-        return $this->transaction->receiver_address;
+        return $this->transaction->to_address;
     }
 
     /**
@@ -115,8 +125,12 @@ class WC_Gateway_Nimiq_Service_Nimiqwatch implements WC_Gateway_Nimiq_Service_In
      * @return {number}
      */
     public function block_height() {
-        return $this->transaction->block_height;
+        return $this->transaction->height;
+    }
+
+    private function makeUrl( $path ) {
+        return 'https://api.nimiqx.com/' . $path . '?api_key=' . $this->api_key;
     }
 }
 
-$service = new WC_Gateway_Nimiq_Service_Nimiqwatch( $gateway );
+$service = new WC_Gateway_Nimiq_Service_NimiqX( $gateway );

@@ -6,17 +6,6 @@ After an order is submitted via the Nimiq payment method, the order is placed "o
 Transactions need to be validated manually with a *Validate Transactions* bulk action from the *Orders* admin page.
 When a transaction is validated, the order status is set to "processing".
 
-## Limitations
-
-### Testnet only!
-This plugin depends on the Nimiq Accounts Manager with third-party support, which is currently only available in
-the Nimiq testnet. This plugin can therefore **not** be used in the mainnet to transact real value.
-
-### No automatic currency conversion!
-**This plugin does not currently include automatic currency conversion and requires the currency of the webshop to be set to NIM!**
-The currency setup is included in this plugin and NIM will be available to select under
-"WooCommerce &gt; Settings &gt; General &gt; Currency options" after activating this plugin.
-
 ## Installation
 
 1. Be sure you're running WooCommerce 3.0 or higher in your shop.
@@ -27,11 +16,14 @@ The currency setup is included in this plugin and NIM will be available to selec
 3. Activate the plugin through the **Plugins** menu in WordPress
 4. Go to **WooCommerce &gt; Settings &gt; Payments** and select the "Nimiq" method to configure this plugin
 
-**Can I improve and fork this?**
-Please do! Issues and pull requests are very welcome! Or just adapt the plugin to your needs in a fork!
+## Automatic Currency Conversion
 
-**What is the text domain for translations?**
-The text domain is `wc-gateway-nimiq`.
+This plugin supports automatically converting from your store currency to NIM
+upon checkout. Here is a list of supported currencies for the available conversion
+services:
+
+[NimiqX](https://api.nimiqx.com/price?api_key=210b34d0df702dd157d31f118ae00420),
+[Coingecko](https://api.coingecko.com/api/v3/simple/supported_vs_currencies)
 
 ## Adding a new validation service
 
@@ -55,11 +47,20 @@ also needs to be adapted to show/hide those fields conditionally.
 - Tested up to: 5.0
 - Requires WooCommerce at least: 3.5
 - Tested WooCommerce up to: 3.5
-- Stable Tag: 2.5.0
+- Stable Tag: 2.6.0
 - License: GPLv3
 - License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
+**Can I improve and fork this?**
+Please do! Issues and pull requests are very welcome! Or just adapt the plugin to your needs in a fork!
+
+**What is the text domain for translations?**
+The text domain is `wc-gateway-nimiq`.
+
 ## Changelog
+
+**2019.05.23 - version 2.6.0**
+- Enable mainnet option
 
 **2019.05.17 - version 2.5.0**
 - Bug fix for JS error
